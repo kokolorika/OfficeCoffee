@@ -141,6 +141,7 @@ if __name__ == "__main__":
                 print("d: %d" % delta)
 
                 if delta < 0:
+                    # liquid level decreases
                     liquidLevel = calcLiquidLevel(avg)
 
                     if liquidLevel < 0:
@@ -149,6 +150,9 @@ if __name__ == "__main__":
                     response = postToThingSpeakChannel(channel, liquidLevel)
                     print("Response: " + response)
                     del avgHistory[:]
+                elif delta > 10:
+                    # liquid level increases
+                    # TODO implement
 
     except (KeyboardInterrupt, SystemExit):
         cleanAndExit()

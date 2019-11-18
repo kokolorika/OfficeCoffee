@@ -7,14 +7,22 @@ import logging
 
 #thingspeak.requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += ':ADH-AES128-SHA256'
 
+# Configure log file and level
 logging.basicConfig(filename='app.log',level=logging.DEBUG)
 
-channel_id = 762284 # your channel id
-write_key = "PTS9LJH7XS14MWIP" # channel write key
-read_key = "A5FR11R5SATF5TQ2" # channel read key
-empty_pot = 1318
+# ThingSpeak Stuff
+CHANNEL_ID = 762284 # your channel id
+WRITE_KEY = "PTS9LJH7XS14MWIP" # channel write key
+READ_KEY = "A5FR11R5SATF5TQ2" # channel read key
 
-EMULATE_HX711=False
+# Coffee Stuff
+EMPTY_POT = 1318 # wigth of the empty pot
+
+# Measurement config params
+SAMPLING_RATE = 2 # number of samples per second
+AVG_WINDOW_SIZE = 5 # window size of the moving avg
+
+EMULATE_HX711=True
 
 if not EMULATE_HX711:
     import RPi.GPIO as GPIO
@@ -22,9 +30,7 @@ if not EMULATE_HX711:
 else:
     from emulated_hx711 import HX711
 
-
 hx = HX711(5, 6)
-
 
 # I've found out that, for some reason, the order of the bytes is not always the same between versions of python, numpy and the hx711 itself.
 # Still need to figure out why does it change.
@@ -95,22 +101,54 @@ def postToThingSpeakChannel(channel, val):
 	logging.exception(repr(err))
         print("connection failed")
         
-        
+
+def measure(times, rate):
+    samples = []
+
+    while len(samples) < times:
+        val = measure()
+        print("Measured value: %d" % val)
+        samples.append(val)
+        time.sleep(1/rate)
+    
+    return samples
+
+def calcLiquidLevel(val):
+    return val - EMPTY_POT
+
+def avg(values):
+    return sum(values) / len(values)
+
 if __name__ == "__main__":
-    channel = thingspeak.Channel(id=channel_id, write_key=write_key, api_key=read_key)
+    channel = thingspeak.Channel(id=CHANNEL_ID, write_key=WRITE_KEY, api_key=READ_KEY)
     logging.info(repr(channel))
+
+    avgHistory = []
+
     try:
         while True:
-            val = measure()
-            print("Measured value: %d" % val)
-	    val = val - empty_pot
+            samples = measure(AVG_WINDOW_SIZE, SAMPLING_RATE)
+            print(samples)
 
-	    if val < 0:
-		val = 0
+            avg = avg(samples)
+            print("AVG: %d" % avg)
 
-	    print("Coffee: %d" % val)
-            response = postToThingSpeakChannel(channel, val)
-            #print("Response: " + response)
-            time.sleep(15)
+            avgHistory.append(avg)
+            print(avgHistory)
+
+            if len(avgHistory) > 1:
+                delta = avgHistory[1] - avgHistory[0] # d=b-a
+                print("d: %d" % delta)
+
+                if delta < 0:
+                    liquidLevel = calcLiquidLevel(avg)
+
+                    if liquidLevel < 0:
+                        liquidLevel = 0
+
+                    response = postToThingSpeakChannel(channel, liquidLevel)
+                    print("Response: " + response)
+                    del avgHistory[:]
+
     except (KeyboardInterrupt, SystemExit):
         cleanAndExit()

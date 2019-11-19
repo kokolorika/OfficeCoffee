@@ -116,8 +116,8 @@ def measureX(times, rate):
 def calcLiquidLevel(val):
     return val - EMPTY_POT
 
-def avg(values):
-    return sum(values) / len(values)
+def calcAvg(values):
+    return int(sum(values) / len(values))
 
 if __name__ == "__main__":
     channel = thingspeak.Channel(id=CHANNEL_ID, write_key=WRITE_KEY, api_key=READ_KEY)
@@ -130,7 +130,7 @@ if __name__ == "__main__":
             samples = measureX(AVG_WINDOW_SIZE, SAMPLING_RATE)
             print(samples)
 
-            avg = int(avg(samples))
+            avg = calcAvg(samples)
             print("AVG: %d" % avg)
 
             avgHistory.append(avg)

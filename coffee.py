@@ -22,7 +22,7 @@ EMPTY_POT = 1318 # wigth of the empty pot
 SAMPLING_RATE = 2 # number of samples per second
 AVG_WINDOW_SIZE = 5 # window size of the moving avg
 
-EMULATE_HX711=True
+EMULATE_HX711=False
 
 if not EMULATE_HX711:
     import RPi.GPIO as GPIO

@@ -130,7 +130,7 @@ if __name__ == "__main__":
             samples = measureX(AVG_WINDOW_SIZE, SAMPLING_RATE)
             print(samples)
 
-            avg = avg(samples)
+            avg = int(avg(samples))
             print("AVG: %d" % avg)
 
             avgHistory.append(avg)

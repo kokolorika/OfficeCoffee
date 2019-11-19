@@ -19,8 +19,12 @@ READ_KEY = "A5FR11R5SATF5TQ2" # channel read key
 EMPTY_POT = 1318 # wigth of the empty pot
 
 # Measurement config params
-SAMPLING_RATE = 2 # number of samples per second
-AVG_WINDOW_SIZE = 5 # window size of the moving avg
+SAMPLING_RATE = 2 # number of samples per second (in Hz)
+AVG_WINDOW_SIZE = 5 # window size of the moving average
+LLD_THRESHOLD = 0 # LLD = liquid level decrease
+LLI_THRESHOLD = 5 # LLI = liquid level increase 
+LLI_DETECTION_SECONS = 30 # LLI = liquid level increases; seconds elapsed till we assume an increase
+LLI_DETECTION_MEASURES_COUNT = LLI_DETECTION_SECONS / AVG_WINDOW_SIZE / SAMPLING_RATE # number of measures till we assume an increase
 
 EMULATE_HX711=False
 
@@ -124,6 +128,7 @@ if __name__ == "__main__":
     logging.info(repr(channel))
 
     avgHistory = []
+    increaseHistory = []
 
     try:
         while True:
@@ -140,7 +145,7 @@ if __name__ == "__main__":
                 delta = avgHistory[1] - avgHistory[0] # d=b-a
                 print("d: %d" % delta)
 
-                if delta < 0:
+                if delta < LLD_THRESHOLD:
                     # liquid level decreases
                     liquidLevel = calcLiquidLevel(avg)
 
@@ -150,10 +155,20 @@ if __name__ == "__main__":
                     response = postToThingSpeakChannel(channel, liquidLevel)
                     print("Response: " + response)
                     del avgHistory[:]
-                elif delta > 10:
-                    # liquid level increases
-                    # TODO implement
-		    print("liquid level increases --> TODO")
+                    del increaseHistory[:]
+
+                elif delta > LLI_THRESHOLD:
+                    # liquid level increases significantly
+                    increaseHistory.append(avg)
+                    
+                    if len(increaseHistory) = LLI_DETECTION_MEASURES_COUNT:
+                        print("The Liquid level increased by %d ml for more than %d seconds" % (LLI_THRESHOLD, LLI_DETECTION_SECONS))
+                        response = postToThingSpeakChannel(channel, liquidLevel)
+                        print("Response: " + response)
+                        del avgHistory[:]
+                        del increaseHistory[:]
+
+                    avgHistory.pop()
 
     except (KeyboardInterrupt, SystemExit):
         cleanAndExit()

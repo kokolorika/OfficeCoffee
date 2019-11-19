@@ -26,7 +26,7 @@ LLI_THRESHOLD = 5 # LLI = liquid level increase
 LLI_DETECTION_SECONS = 30 # LLI = liquid level increases; seconds elapsed till we assume an increase
 LLI_DETECTION_MEASURES_COUNT = LLI_DETECTION_SECONS / (AVG_WINDOW_SIZE / SAMPLING_RATE) # number of measures till we assume an increase
 
-EMULATE_HX711=True
+EMULATE_HX711=False
 
 if not EMULATE_HX711:
     import RPi.GPIO as GPIO

@@ -102,7 +102,7 @@ def postToThingSpeakChannel(channel, val):
         print("connection failed")
         
 
-def measure(times, rate):
+def measureX(times, rate):
     samples = []
 
     while len(samples) < times:
@@ -127,7 +127,7 @@ if __name__ == "__main__":
 
     try:
         while True:
-            samples = measure(AVG_WINDOW_SIZE, SAMPLING_RATE)
+            samples = measureX(AVG_WINDOW_SIZE, SAMPLING_RATE)
             print(samples)
 
             avg = avg(samples)

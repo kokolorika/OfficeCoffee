@@ -153,6 +153,7 @@ if __name__ == "__main__":
                 elif delta > 10:
                     # liquid level increases
                     # TODO implement
+		    print("liquid level increases --> TODO")
 
     except (KeyboardInterrupt, SystemExit):
         cleanAndExit()

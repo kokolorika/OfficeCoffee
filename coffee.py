@@ -19,14 +19,14 @@ READ_KEY = "A5FR11R5SATF5TQ2" # channel read key
 EMPTY_POT = 1318 # wigth of the empty pot
 
 # Measurement config params
-SAMPLING_RATE = 2 # number of samples per second (in Hz)
+SAMPLING_RATE = 2.0 # number of samples per second (in Hz)
 AVG_WINDOW_SIZE = 5 # window size of the moving average
-LLD_THRESHOLD = 0 # LLD = liquid level decrease
+LLD_THRESHOLD = 2 # LLD = liquid level decrease
 LLI_THRESHOLD = 5 # LLI = liquid level increase 
 LLI_DETECTION_SECONS = 30 # LLI = liquid level increases; seconds elapsed till we assume an increase
-LLI_DETECTION_MEASURES_COUNT = LLI_DETECTION_SECONS / AVG_WINDOW_SIZE / SAMPLING_RATE # number of measures till we assume an increase
+LLI_DETECTION_MEASURES_COUNT = LLI_DETECTION_SECONS / (AVG_WINDOW_SIZE / SAMPLING_RATE) # number of measures till we assume an increase
 
-EMULATE_HX711=False
+EMULATE_HX711=True
 
 if not EMULATE_HX711:
     import RPi.GPIO as GPIO
@@ -111,7 +111,6 @@ def measureX(times, rate):
 
     while len(samples) < times:
         val = measure()
-        print("Measured value: %d" % val)
         samples.append(val)
         time.sleep(1/rate)
     
@@ -136,17 +135,20 @@ if __name__ == "__main__":
             print(samples)
 
             avg = calcAvg(samples)
-            print("AVG: %d" % avg)
+            print("Avg: %d" % avg)
 
             avgHistory.append(avg)
             print(avgHistory)
 
             if len(avgHistory) > 1:
                 delta = avgHistory[1] - avgHistory[0] # d=b-a
-                print("d: %d" % delta)
+                print("delta: %d" % delta)
 
-                if delta < LLD_THRESHOLD:
-                    # liquid level decreases
+                if delta >= LLD_THRESHOLD and delta <= LLI_THRESHOLD:
+                    # liquid level did not change significantly
+                    avgHistory.pop()
+                elif delta < LLD_THRESHOLD:
+                    # liquid level decreases significantly
                     liquidLevel = calcLiquidLevel(avg)
 
                     if liquidLevel < 0:
@@ -161,14 +163,14 @@ if __name__ == "__main__":
                     # liquid level increases significantly
                     increaseHistory.append(avg)
                     
-                    if len(increaseHistory) = LLI_DETECTION_MEASURES_COUNT:
-                        print("The Liquid level increased by %d ml for more than %d seconds" % (LLI_THRESHOLD, LLI_DETECTION_SECONS))
+                    if len(increaseHistory) == LLI_DETECTION_MEASURES_COUNT:
+                        print("The liquid level increased by %d ml for more than %d seconds" % (LLI_THRESHOLD, LLI_DETECTION_SECONS))
                         response = postToThingSpeakChannel(channel, liquidLevel)
                         print("Response: " + response)
                         del avgHistory[:]
                         del increaseHistory[:]
-
-                    avgHistory.pop()
+                    else:
+                        avgHistory.pop()
 
     except (KeyboardInterrupt, SystemExit):
         cleanAndExit()

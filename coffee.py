@@ -165,6 +165,8 @@ if __name__ == "__main__":
                     
                     if len(increaseHistory) == LLI_DETECTION_MEASURES_COUNT:
                         print("The liquid level increased by %d ml for more than %d seconds" % (LLI_THRESHOLD, LLI_DETECTION_SECONS))
+			liquidLevel = calcLiquidLevel(avg)
+			print("Liquid Level: %d " % liquidLevel)
                         response = postToThingSpeakChannel(channel, liquidLevel)
                         print("Response: " + response)
                         del avgHistory[:]

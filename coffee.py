@@ -21,7 +21,7 @@ EMPTY_POT = 1318 # wigth of the empty pot
 # Measurement config params
 SAMPLING_RATE = 2.0 # number of samples per second (in Hz)
 AVG_WINDOW_SIZE = 5 # window size of the moving average
-LLD_THRESHOLD = 2 # LLD = liquid level decrease
+LLD_THRESHOLD = -2 # LLD = liquid level decrease
 LLI_THRESHOLD = 5 # LLI = liquid level increase 
 LLI_DETECTION_SECONS = 30 # LLI = liquid level increases; seconds elapsed till we assume an increase
 LLI_DETECTION_MEASURES_COUNT = LLI_DETECTION_SECONS / (AVG_WINDOW_SIZE / SAMPLING_RATE) # number of measures till we assume an increase

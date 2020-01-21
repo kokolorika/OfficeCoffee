@@ -101,9 +101,9 @@ def postToThingSpeakChannel(channel, val):
     try:
         return channel.update({'field1': val})
     except:
-	err = sys.exc_info()[0]
-	logging.exception(repr(err))
-        print("connection failed")
+	err = repr(sys.exc_info()[0])
+	logging.exception(err)
+        return "connection failed, reason: " + err
         
 
 def measureX(times, rate):
@@ -160,7 +160,7 @@ if __name__ == "__main__":
                     del increaseHistory[:]
 
                 elif delta > LLI_THRESHOLD:
-                    # liquid level increases significantly
+                    # liquid level increases 'significantly'
                     increaseHistory.append(avg)
                     
                     if len(increaseHistory) == LLI_DETECTION_MEASURES_COUNT:

@@ -8,7 +8,7 @@ import logging
 #thingspeak.requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += ':ADH-AES128-SHA256'
 
 # Configure log file and level
-logging.basicConfig(filename='app.log',level=logging.DEBUG)
+logging.basicConfig(filename='app.log', level=logging.DEBUG, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
 # ThingSpeak Stuff
 CHANNEL_ID = 762284 # your channel id

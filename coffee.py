@@ -7,12 +7,24 @@ import logging
 
 #thingspeak.requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += ':ADH-AES128-SHA256'
 
-logging.basicConfig(filename='app.log',level=logging.DEBUG)
+# Configure log file and level
+logging.basicConfig(filename='app.log', level=logging.DEBUG, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
-channel_id = 762284 # your channel id
-write_key = "PTS9LJH7XS14MWIP" # channel write key
-read_key = "A5FR11R5SATF5TQ2" # channel read key
-empty_pot = 1318
+# ThingSpeak Stuff
+CHANNEL_ID = 762284 # your channel id
+WRITE_KEY = "PTS9LJH7XS14MWIP" # channel write key
+READ_KEY = "A5FR11R5SATF5TQ2" # channel read key
+
+# Coffee Stuff
+EMPTY_POT = 1318 # wigth of the empty pot
+
+# Measurement config params
+SAMPLING_RATE = 2.0 # number of samples per second (in Hz)
+AVG_WINDOW_SIZE = 5 # window size of the moving average
+LLD_THRESHOLD = -2 # LLD = liquid level decrease
+LLI_THRESHOLD = 5 # LLI = liquid level increase 
+LLI_DETECTION_SECONS = 30 # LLI = liquid level increases; seconds elapsed till we assume an increase
+LLI_DETECTION_MEASURES_COUNT = LLI_DETECTION_SECONS / (AVG_WINDOW_SIZE / SAMPLING_RATE) # number of measures till we assume an increase
 
 EMULATE_HX711=False
 
@@ -22,9 +34,7 @@ if not EMULATE_HX711:
 else:
     from emulated_hx711 import HX711
 
-
 hx = HX711(5, 6)
-
 
 # I've found out that, for some reason, the order of the bytes is not always the same between versions of python, numpy and the hx711 itself.
 # Still need to figure out why does it change.
@@ -91,26 +101,78 @@ def postToThingSpeakChannel(channel, val):
     try:
         return channel.update({'field1': val})
     except:
-	err = sys.exc_info()[0]
-	logging.exception(repr(err))
-        print("connection failed")
+	err = repr(sys.exc_info()[0])
+	logging.exception(err)
+        return "connection failed, reason: " + err
         
-        
+
+def measureX(times, rate):
+    samples = []
+
+    while len(samples) < times:
+        val = measure()
+        samples.append(val)
+        time.sleep(1/rate)
+    
+    return samples
+
+def calcLiquidLevel(val):
+    return val - EMPTY_POT
+
+def calcAvg(values):
+    return int(sum(values) / len(values))
+
 if __name__ == "__main__":
-    channel = thingspeak.Channel(id=channel_id, write_key=write_key, api_key=read_key)
+    channel = thingspeak.Channel(id=CHANNEL_ID, write_key=WRITE_KEY, api_key=READ_KEY)
     logging.info(repr(channel))
+
+    avgHistory = []
+    increaseHistory = []
+
     try:
         while True:
-            val = measure()
-            print("Measured value: %d" % val)
-	    val = val - empty_pot
+            samples = measureX(AVG_WINDOW_SIZE, SAMPLING_RATE)
+            print(samples)
 
-	    if val < 0:
-		val = 0
+            avg = calcAvg(samples)
+            print("Avg: %d" % avg)
 
-	    print("Coffee: %d" % val)
-            response = postToThingSpeakChannel(channel, val)
-            #print("Response: " + response)
-            time.sleep(15)
+            avgHistory.append(avg)
+            print(avgHistory)
+
+            if len(avgHistory) > 1:
+                delta = avgHistory[1] - avgHistory[0] # d=b-a
+                print("delta: %d" % delta)
+
+                if delta >= LLD_THRESHOLD and delta <= LLI_THRESHOLD:
+                    # liquid level did not change significantly
+                    avgHistory.pop()
+                elif delta < LLD_THRESHOLD:
+                    # liquid level decreases significantly
+                    liquidLevel = calcLiquidLevel(avg)
+
+                    if liquidLevel < 0:
+                        liquidLevel = 0
+
+                    response = postToThingSpeakChannel(channel, liquidLevel)
+                    print("Response: " + response)
+                    del avgHistory[:]
+                    del increaseHistory[:]
+
+                elif delta > LLI_THRESHOLD:
+                    # liquid level increases 'significantly'
+                    increaseHistory.append(avg)
+                    
+                    if len(increaseHistory) == LLI_DETECTION_MEASURES_COUNT:
+                        print("The liquid level increased by %d ml for more than %d seconds" % (LLI_THRESHOLD, LLI_DETECTION_SECONS))
+			liquidLevel = calcLiquidLevel(avg)
+			print("Liquid Level: %d " % liquidLevel)
+                        response = postToThingSpeakChannel(channel, liquidLevel)
+                        print("Response: " + response)
+                        del avgHistory[:]
+                        del increaseHistory[:]
+                    else:
+                        avgHistory.pop()
+
     except (KeyboardInterrupt, SystemExit):
         cleanAndExit()
